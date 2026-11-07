@@ -32,6 +32,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'last_login_at' => 'datetime',
             'previous_login_at' => 'datetime',
+            'blocked_at' => 'datetime',
         ];
     }
 
@@ -50,6 +51,7 @@ class User extends Authenticatable
             'email' => $this->email,
             'role' => $this->role,
             'status' => $this->status,
+            'failed_attempts' => $this->failed_attempts,
             'created_at' => $this->created_at,
             'previous_login_at' => $this->previous_login_at,
         ];

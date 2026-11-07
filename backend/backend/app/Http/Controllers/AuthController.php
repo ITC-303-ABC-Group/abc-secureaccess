@@ -11,6 +11,9 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    /** Wrong passwords allowed before an account is blocked. */
+    private const MAX_FAILED_ATTEMPTS = 5;
+
     public function register(Request $request): JsonResponse
     {
         $request->merge([
@@ -62,8 +65,45 @@ class AuthController extends Controller
             ], 404);
         }
 
+        // Blocked after too many wrong passwords: only an administrator can unblock it.
+        if ($user->status === 'blocked') {
+            $this->record($request, $user->username, $user->role, 'blocked');
+
+            return response()->json([
+                'message' => 'This account is blocked after too many failed attempts. Contact an administrator to unblock it.',
+            ], 403);
+        }
+
         // Account exists, wrong password.
         if (! Hash::check($credentials['password'], $user->password)) {
+            // Only active, non-admin accounts are auto-blocked. Admins could lock themselves
+            // out (the login throttle still slows guessing), and a suspended account must
+            // stay suspended rather than turn into "blocked".
+            if (! $user->isAdmin() && $user->status === 'active') {
+                $user->failed_attempts = $user->failed_attempts + 1;
+
+                if ($user->failed_attempts >= self::MAX_FAILED_ATTEMPTS) {
+                    $user->status = 'blocked';
+                    $user->blocked_at = now();
+                    $user->save();
+                    $user->tokens()->delete();
+
+                    $this->record($request, $user->username, $user->role, 'blocked');
+
+                    return response()->json([
+                        'message' => 'Too many failed attempts. This account is now blocked. Contact an administrator to unblock it.',
+                    ], 403);
+                }
+
+                $user->save();
+                $left = self::MAX_FAILED_ATTEMPTS - $user->failed_attempts;
+                $this->record($request, $user->username, $user->role, 'failed');
+
+                return response()->json([
+                    'message' => "Incorrect password. {$left} " . ($left === 1 ? 'attempt' : 'attempts') . ' left before the account is blocked.',
+                ], 401);
+            }
+
             $this->record($request, $user->username, $user->role, 'failed');
 
             return response()->json(['message' => 'Incorrect password.'], 401);
@@ -78,6 +118,7 @@ class AuthController extends Controller
         $user->forceFill([
             'previous_login_at' => $user->last_login_at,
             'last_login_at' => now(),
+            'failed_attempts' => 0, // a good login clears the counter
         ])->save();
 
         $this->record($request, $user->username, $user->role, 'success');

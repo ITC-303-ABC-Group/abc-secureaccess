@@ -16,12 +16,12 @@ const TABS = [
 
 const HEADERS = {
   dashboard: ["Admin dashboard", "Manage users and monitor sign-in activity."],
-  users: ["Users", "Suspend, reactivate or delete registered accounts."],
+  users: ["Users", "Block, unblock, suspend or delete registered accounts."],
   activity: ["Login activity", "Review every sign-in attempt."],
   account: ["My account", "Update your administrator password."],
 };
 
-const RESULT = { success: ["Successful", "ok"], failed: ["Failed", "error"], blocked: ["Suspended", "warn"] };
+const RESULT = { success: ["Successful", "ok"], failed: ["Failed", "error"], blocked: ["Blocked", "error"] };
 
 function AdminDashboard({ currentUser, onLogout }) {
   const [tab, setTab] = useState("dashboard");
@@ -59,11 +59,11 @@ function AdminDashboard({ currentUser, onLogout }) {
     load(); // always show fresh data
   };
 
-  const toggleStatus = async (user) => {
+  const setStatus = async (user, status) => {
     try {
       await api(`/admin/users/${user.id}/status`, {
         method: "PATCH",
-        body: { status: user.status === "suspended" ? "active" : "suspended" },
+        body: { status },
       });
       await load();
     } catch (err) {
@@ -176,7 +176,7 @@ function AdminDashboard({ currentUser, onLogout }) {
         )}
 
         {showData && tab === "users" && (
-          <UserTable users={users} onToggleStatus={toggleStatus} onDelete={removeUser} />
+          <UserTable users={users} onSetStatus={setStatus} onDelete={removeUser} />
         )}
         {showData && tab === "activity" && <LoginActivity activity={activity} />}
         {tab === "account" && (

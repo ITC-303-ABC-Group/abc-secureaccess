@@ -2,7 +2,13 @@ import { useState } from "react";
 import { SearchIcon } from "./Icons";
 import { formatDate, initial } from "../lib/format";
 
-function UserTable({ users, onToggleStatus, onDelete }) {
+const STATUS = {
+  active: ["Active", "ok"],
+  suspended: ["Suspended", "warn"],
+  blocked: ["Blocked", "error"],
+};
+
+function UserTable({ users, onSetStatus, onDelete }) {
   const [query, setQuery] = useState("");
 
   const q = query.trim().toLowerCase();
@@ -55,7 +61,7 @@ function UserTable({ users, onToggleStatus, onDelete }) {
             </thead>
             <tbody>
               {rows.map((u) => {
-                const suspended = u.status === "suspended";
+                const [statusLabel, statusTone] = STATUS[u.status] ?? STATUS.active;
                 return (
                   <tr key={u.id}>
                     <td>
@@ -69,9 +75,10 @@ function UserTable({ users, onToggleStatus, onDelete }) {
                       <span className={`badge role-${u.role}`}>{u.role}</span>
                     </td>
                     <td>
-                      <span className={`badge ${suspended ? "warn" : "ok"}`}>
-                        {suspended ? "Suspended" : "Active"}
-                      </span>
+                      <span className={`badge ${statusTone}`}>{statusLabel}</span>
+                      {u.status === "active" && u.failed_attempts > 0 && (
+                        <small className="muted"> {u.failed_attempts} failed</small>
+                      )}
                     </td>
                     <td>{formatDate(u.created_at)}</td>
                     <td>
@@ -79,9 +86,26 @@ function UserTable({ users, onToggleStatus, onDelete }) {
                         <span className="muted">Protected</span>
                       ) : (
                         <div className="row-actions">
-                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => onToggleStatus(u)}>
-                            {suspended ? "Reactivate" : "Suspend"}
-                          </button>
+                          {u.status === "active" && (
+                            <>
+                              <button type="button" className="btn btn-secondary btn-sm" onClick={() => onSetStatus(u, "blocked")}>
+                                Block
+                              </button>
+                              <button type="button" className="btn btn-secondary btn-sm" onClick={() => onSetStatus(u, "suspended")}>
+                                Suspend
+                              </button>
+                            </>
+                          )}
+                          {u.status === "blocked" && (
+                            <button type="button" className="btn btn-primary btn-sm" onClick={() => onSetStatus(u, "active")}>
+                              Unblock
+                            </button>
+                          )}
+                          {u.status === "suspended" && (
+                            <button type="button" className="btn btn-secondary btn-sm" onClick={() => onSetStatus(u, "active")}>
+                              Reactivate
+                            </button>
+                          )}
                           <button type="button" className="btn btn-danger btn-sm" onClick={() => remove(u)}>
                             Delete
                           </button>

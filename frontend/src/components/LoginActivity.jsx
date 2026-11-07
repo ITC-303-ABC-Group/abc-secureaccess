@@ -5,7 +5,7 @@ import { ClockIcon } from "./Icons";
 const RESULT = {
   success: ["Successful", "ok"],
   failed: ["Failed", "error"],
-  blocked: ["Suspended", "warn"],
+  blocked: ["Blocked", "error"],
 };
 
 const FILTERS = [

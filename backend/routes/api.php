@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Route;
 
 // Public
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
 
 // Signed-in users (Sanctum bearer token)
 Route::middleware('auth:sanctum')->group(function () {
